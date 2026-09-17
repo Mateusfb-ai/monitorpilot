@@ -2,7 +2,6 @@ import XCTest
 @testable import MonitorPilot
 
 final class DDCPortMapperTests: XCTestCase {
-    // Valores reais do M4 (ioreg ConnectionMapping × CGDisplayModelNumber).
     let lg = DDCPortMapper.Connection(role: "DCPEXT1", productID: 0x9D5C, productName: "LG ULTRAFINE")
     let dell = DDCPortMapper.Connection(role: "DCPEXT2", productID: 0x4142, productName: "DELL P2722H")
 

@@ -1,5 +1,3 @@
-// Gera o ícone do MonitorPilot: squircle com gradiente + display + sol EDR.
-// Uso: swift scripts/make-icon.swift <saída.iconset>
 import AppKit
 
 let out = URL(fileURLWithPath: CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "AppIcon.iconset")
@@ -9,11 +7,10 @@ func draw(size: CGFloat) -> NSImage {
     let image = NSImage(size: NSSize(width: size, height: size))
     image.lockFocus()
     let s = size
-    let inset = s * 0.06  // margem padrão de ícone macOS
+    let inset = s * 0.06
     let rect = NSRect(x: inset, y: inset, width: s - 2 * inset, height: s - 2 * inset)
     let squircle = NSBezierPath(roundedRect: rect, xRadius: rect.width * 0.225, yRadius: rect.width * 0.225)
 
-    // Fundo: gradiente roxo-azul profundo (céu noturno → tela acesa)
     NSGradient(colors: [
         NSColor(calibratedRed: 0.10, green: 0.08, blue: 0.28, alpha: 1),
         NSColor(calibratedRed: 0.22, green: 0.16, blue: 0.55, alpha: 1),
@@ -22,7 +19,6 @@ func draw(size: CGFloat) -> NSImage {
 
     squircle.addClip()
 
-    // Sol EDR: glow radial no topo
     let sunCenter = NSPoint(x: s * 0.5, y: s * 0.62)
     let glow = NSGradient(colors: [
         NSColor(calibratedRed: 1, green: 0.92, blue: 0.65, alpha: 0.95),
@@ -31,12 +27,10 @@ func draw(size: CGFloat) -> NSImage {
     ])!
     glow.draw(fromCenter: sunCenter, radius: 0, toCenter: sunCenter, radius: s * 0.34, options: [])
 
-    // Disco do sol
     let sunR = s * 0.10
     NSColor(calibratedRed: 1, green: 0.95, blue: 0.80, alpha: 1).setFill()
     NSBezierPath(ovalIn: NSRect(x: sunCenter.x - sunR, y: sunCenter.y - sunR, width: 2 * sunR, height: 2 * sunR)).fill()
 
-    // Display: moldura branca arredondada na metade de baixo
     let dW = s * 0.56, dH = s * 0.34
     let dRect = NSRect(x: (s - dW) / 2, y: s * 0.16, width: dW, height: dH)
     let frame = NSBezierPath(roundedRect: dRect, xRadius: s * 0.045, yRadius: s * 0.045)
@@ -44,14 +38,12 @@ func draw(size: CGFloat) -> NSImage {
     frame.lineWidth = s * 0.035
     frame.stroke()
 
-    // "Tela" do display: reflexo do gradiente, mais claro (upscaling!)
     let screenRect = dRect.insetBy(dx: s * 0.035, dy: s * 0.035)
     NSGradient(colors: [
         NSColor(calibratedRed: 1, green: 0.85, blue: 0.50, alpha: 0.85),
         NSColor(calibratedRed: 0.60, green: 0.45, blue: 0.95, alpha: 0.6),
     ])!.draw(in: NSBezierPath(roundedRect: screenRect, xRadius: s * 0.02, yRadius: s * 0.02), angle: -70)
 
-    // Pezinho
     NSColor.white.withAlphaComponent(0.95).setFill()
     NSBezierPath(roundedRect: NSRect(x: s * 0.44, y: s * 0.105, width: s * 0.12, height: s * 0.035),
                  xRadius: s * 0.015, yRadius: s * 0.015).fill()

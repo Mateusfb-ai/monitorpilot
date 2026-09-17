@@ -2,15 +2,9 @@ import Foundation
 import CoreGraphics
 import AppKit
 
-/// "Exibir Notch" (só telas internas): o macOS publica dois modos com a mesma
-/// largura e a mesma escala, cujas alturas diferem exatamente pela faixa do
-/// notch (ex.: 3024×1964 com notch vs 3024×1890 sem). Trocar de modo é o que o
-/// BetterDisplay faz — o modo mais alto é o que EXIBE o notch.
 enum NotchPlanner {
-    /// Faixa do notch: até 8% da altura (Apple usa ~74px em 1964).
     static let maxBandRatio = 0.08
 
-    /// Par (com notch, sem notch) do modo atual, se existir na lista.
     static func counterpart(of current: DisplayMode, in modes: [DisplayMode]) -> DisplayMode? {
         modes
             .filter {
@@ -34,7 +28,6 @@ enum NotchPlanner {
         return band > 0 && Double(band) <= Double(tall) * maxBandRatio
     }
 
-    /// O modo mostra o notch? (é o mais alto do par)
     static func showsNotch(_ mode: DisplayMode, counterpart: DisplayMode) -> Bool {
         mode.pixelHeight > counterpart.pixelHeight
     }
@@ -57,7 +50,6 @@ enum NotchService {
         return NotchPlanner.showsNotch(pair.mode, counterpart: pair.other)
     }
 
-    /// Alterna. Reversível: é só trocar de volta pro outro modo do par.
     @discardableResult
     static func set(_ id: CGDirectDisplayID, showNotch: Bool) -> Bool {
         guard let pair = current(id) else { return false }

@@ -2,18 +2,6 @@ import Foundation
 import AppKit
 import CoreGraphics
 
-/// Monitor de Transmissão: joga a captura ao vivo de uma tela dentro de OUTRA
-/// tela, em janela sem bordas ocupando a tela inteira do destino.
-///
-///  • "Transmitir esta tela para uma tela virtual" — cria uma tela virtual do
-///    tamanho exato da fonte e desenha a captura da fonte nela (é assim que o
-///    BetterDisplay alimenta alvos Sidecar/AirPlay: quem espelha/estende a tela
-///    virtual é o próprio macOS).
-///  • "Transmitir <virtual> para esta tela" — o inverso: mostra o conteúdo de
-///    uma tela virtual numa janela cheia do display físico.
-///
-/// Estado é de sessão (não persiste): `applicationWillTerminate` já destrói as
-/// telas virtuais, e uma transmissão órfã no boot seria pior que reabrir na mão.
 @MainActor
 final class StreamService: ObservableObject {
     static let shared = StreamService()
@@ -26,7 +14,6 @@ final class StreamService: ObservableObject {
         let label: String
         let window: NSWindow
         let capture: DisplayCaptureSession
-        /// Tela virtual criada por esta transmissão (só no modo "para virtual").
         let ownedVirtual: VirtualScreen?
 
         init(sourceDisplayID: CGDirectDisplayID, targetDisplayID: CGDirectDisplayID,
@@ -52,7 +39,6 @@ final class StreamService: ObservableObject {
         sessions.first { $0.sourceDisplayID == source }
     }
 
-    /// (a) Transmite `source` para uma tela virtual recém-criada.
     func streamToVirtual(source: DisplayInfo, askPermission: Bool) async -> Bool {
         guard checkPermission(askPermission) else { return false }
         guard VirtualDisplayService.isAvailable else {
@@ -63,7 +49,6 @@ final class StreamService: ObservableObject {
         let w = Int(pixels.width), h = Int(pixels.height)
         guard w > 0, h > 0 else { lastError = "tamanho da fonte desconhecido"; return false }
 
-        // HiDPI segue a fonte: se o físico está em modo HiDPI, a virtual também.
         let hiDPI = pixels.width > CGFloat(CGDisplayPixelsWide(source.id)) + 1
         guard let virtual = VirtualDisplayService.shared.create(
             name: "Transmissão \(source.name)",
@@ -87,7 +72,6 @@ final class StreamService: ObservableObject {
         return true
     }
 
-    /// (b) Transmite a tela virtual `virtual` para o display físico `target`.
     func streamVirtual(_ virtual: VirtualScreen, to target: DisplayInfo,
                        askPermission: Bool) -> Bool {
         guard checkPermission(askPermission) else { return false }
@@ -116,8 +100,6 @@ final class StreamService: ObservableObject {
     }
 
     func stopAll() { sessions.forEach(stop) }
-
-    // MARK: interno
 
     private func checkPermission(_ ask: Bool) -> Bool {
         guard ScreenCapturePermission.granted else {
@@ -158,7 +140,6 @@ final class StreamService: ObservableObject {
                                 ownedVirtual: ownedVirtual))
     }
 
-    /// A tela virtual entra no sistema de forma assíncrona (~1–2s).
     private func waitForScreen(of virtual: VirtualScreen, timeout: Double = 4) async -> NSScreen? {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {

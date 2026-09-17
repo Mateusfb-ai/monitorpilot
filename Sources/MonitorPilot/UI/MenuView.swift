@@ -3,8 +3,6 @@ import CoreGraphics
 
 @MainActor
 final class DisplayStore: ObservableObject {
-    /// Hot-plug: reconexão de display reaplica HDR/preset salvos sem precisar
-    /// abrir o popover (debounce 1,5s — wake + reconexão chegam juntos).
     private var screenObserver: NSObjectProtocol?
     private var screenTask: Task<Void, Never>?
     func startObservingScreens() {
@@ -31,8 +29,6 @@ final class DisplayStore: ObservableObject {
     @Published var nightShift = false
     @Published var presets: [CGDirectDisplayID: [XDRPreset]] = [:]
     @Published var activePreset: [CGDirectDisplayID: Int] = [:]
-    // Caches de linhas do popover — varrer allModes/perfis ICC é caro demais
-    // pra rodar dentro de `body` (o slider de brilho redesenha por frame).
     @Published var hiDPIToggle: [CGDirectDisplayID: (isHiDPI: Bool, twinID: Int32)] = [:]
     private var hiDPIEnabling: Set<CGDirectDisplayID> = []
     @Published var notchSupported: [CGDirectDisplayID: Bool] = [:]
@@ -44,8 +40,6 @@ final class DisplayStore: ObservableObject {
     init() {
         DDCService.tuning = config.ddcTuning
         startObservingScreens()
-        // MPDisplayMgr custa ~1,5s — aquece em background; quando pronto,
-        // um refresh preenche as linhas de preset.
         PresetService.warmUp { [weak self] in
             Task { @MainActor in self?.refresh() }
         }
@@ -55,7 +49,6 @@ final class DisplayStore: ObservableObject {
             self?.savePIPConfig(key: key, pipConfig)
         }
         if config.restoreOnLaunch { reconnectOrphansIfNeeded(); restoreSaved(); restorePIPs() }
-        // Arma a proteção só depois da restauração assentar.
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(5))
             self?.guardArmed = true
@@ -79,7 +72,6 @@ final class DisplayStore: ObservableObject {
 
     func refresh() {
         displays = DisplayManager.onlineDisplays()
-        // lembra o ID de cada físico (é o que o CGS precisa pra religar)
         for d in displays where !VirtualDisplayService.shared.isVirtual(d.id) {
             let key = ConfigStore.stableKey(d)
             if config.displays[key]?.lastDisplayID != d.id {
@@ -90,20 +82,16 @@ final class DisplayStore: ObservableObject {
             }
         }
         for d in displays {
-            if brightness[d.id] == nil {  // DDC é lento (40-80ms) — só lê na primeira vez
+            if brightness[d.id] == nil {
                 brightness[d.id] = BrightnessService.combined(d.id, switchpoint: displayConfig(d).combinedSwitchpoint)
             }
             if color[d.id] == nil { color[d.id] = ColorService.applied[d.id] ?? .neutral }
             if upscalingOn[d.id] == nil { upscalingOn[d.id] = displayConfig(d).upscalingEnabled }
-            // Preset pode mudar por fora (Ajustes do Sistema) — relê sempre;
-            // se mudou externamente, a gamma foi zerada: reaplica tudo.
             if presets[d.id] == nil { presets[d.id] = PresetService.presets(for: d.id) }
             let nowActive = PresetService.activePresetIndex(d.id)
             let changedOutside = activePreset[d.id] != nil && activePreset[d.id] != nowActive
             activePreset[d.id] = nowActive
             if changedOutside { afterPresetChange(d) }
-            // Cobre reconexão: refresh() roda de novo sempre que o popover/janela
-            // reabre, então um display que acabou de voltar já reaplica o HDR salvo aqui.
             if config.restoreOnLaunch { applyHDRIfNeeded(d) }
             hiDPIToggle[d.id] = HiDPIToggleService.state(d.id)
             notchSupported[d.id] = NotchService.isSupported(d)
@@ -114,8 +102,6 @@ final class DisplayStore: ObservableObject {
         UpscalingService.shared.setEDRPipeline(active: anyEDR)
     }
 
-    /// Faixa do slider combinado deste display (1.0, ou até o teto de upscaling).
-    /// EDR real: limitado pelo headroom E pelo cap. Realce SDR: só pelo cap.
     func combinedMax(_ d: DisplayInfo) -> Float {
         guard upscalingOn[d.id] == true else { return 1 }
         let cap = displayConfig(d).maxBoostPercent / 100
@@ -136,7 +122,6 @@ final class DisplayStore: ObservableObject {
         for d in displays {
             guard let saved = config.displays[ConfigStore.stableKey(d)] else { continue }
             if saved.color.boost > 1.001 {
-                // upscaling salvo: restaura o combinado (clamp pelo teto do display)
                 setBrightness(d.id, saved.color.boost)
                 continue
             }
@@ -146,13 +131,9 @@ final class DisplayStore: ObservableObject {
             }
             if let b = saved.lastBrightness { setBrightness(d.id, b) }
         }
-        // HiDPI virtual salvo: recria a tela virtual e re-espelha.
         restoreHiDPIVirtualIfNeeded()
     }
 
-    /// Religa (CGSConfigureDisplayEnabled) displays salvos que sumiram sem o
-    /// dono pedir — o Dell órfão do SIGTERM. Roda no boot e no hot-plug;
-    /// depois de religar, o `didChangeScreenParameters` traz o HiDPI de volta.
     func reconnectOrphansIfNeeded() {
         guard SystemService.disconnectAvailable else { return }
         let saved = config.displays.mapValues { (lastID: $0.lastDisplayID, soft: $0.softDisconnected) }
@@ -166,7 +147,6 @@ final class DisplayStore: ObservableObject {
         }
     }
 
-    /// "Reconectar" pra um display que o dono desconectou de propósito.
     func reconnect(key: String) {
         guard var dc = config.displays[key], let id = dc.lastDisplayID else { return }
         dc.softDisconnected = false
@@ -175,7 +155,6 @@ final class DisplayStore: ObservableObject {
         _ = SystemService.setConnected(CGDirectDisplayID(id), true)
     }
 
-    /// Displays salvos que o dono desconectou e ainda estão offline (pra listar o botão).
     var softDisconnectedKeys: [String] {
         let onlineKeys = Set(displays.map(ConfigStore.stableKey))
         return config.displays.filter { $0.value.softDisconnected && !onlineKeys.contains($0.key) }.map(\.key).sorted()
@@ -185,10 +164,6 @@ final class DisplayStore: ObservableObject {
         updateDisplayConfig(d) { $0.softDisconnected = true; $0.lastDisplayID = d.id }
     }
 
-    /// Displays físicos (não virtuais) com HiDPI virtual salvo e sem virtual
-    /// ativa — no boot e no hot-plug (Dell religado depois de desconectar
-    /// voltava em 1× até o próximo lançamento). `hiDPIEnabling` evita criar
-    /// duas virtuais quando o próprio enable dispara didChangeScreenParameters.
     private func restoreHiDPIVirtualIfNeeded() {
         for d in displays
         where config.displays[ConfigStore.stableKey(d)]?.hiDPIVirtual == true
@@ -219,8 +194,6 @@ final class DisplayStore: ObservableObject {
 
     private var pending: [CGDirectDisplayID: Task<Void, Never>] = [:]
 
-    /// Debounce de 80ms: DDC via I2C é lento (até 3×20ms por write) —
-    /// sem isso o drag do slider trava a main thread com dezenas de writes.
     private func debounced(_ id: CGDirectDisplayID, _ work: @escaping @MainActor () -> Void) {
         pending[id]?.cancel()
         pending[id] = Task { @MainActor in
@@ -243,24 +216,16 @@ final class DisplayStore: ObservableObject {
         }
     }
 
-    /// Troca de preset Apple: aplica, invalida a tabela de fábrica (cada preset
-    /// carrega a sua e zera a atual — provado ao vivo), relê headroom/brilho e
-    /// reaplica os ajustes de cor salvos por cima da tabela nova.
     func setPreset(_ d: DisplayInfo, index: Int) {
-        // Limpa a gamma ANTES da troca — garante que qualquer snapshot do
-        // WindowServer seja da tabela limpa (sem risco de boost composto).
         ColorService.reset(d.id)
         guard PresetService.setPreset(d.id, index: index) else { return }
         activePreset[d.id] = index
         Task { @MainActor in
-            try? await Task.sleep(for: .seconds(2))  // sistema assenta a troca
+            try? await Task.sleep(for: .seconds(2))
             self.afterPresetChange(d)
         }
     }
 
-    /// Pós-troca de preset (nossa ou externa): a troca recarrega a tabela de
-    /// fábrica e zera nossos ajustes (provado ao vivo) — invalida cache,
-    /// relê brilho/headroom, reaplica cor salva e clampa o slider.
     private func afterPresetChange(_ d: DisplayInfo) {
         ColorService.invalidateFactoryTable(d.id)
         brightness[d.id] = nil
@@ -273,10 +238,6 @@ final class DisplayStore: ObservableObject {
         }
     }
 
-    // MARK: Proteção de configuração
-
-    /// Só arma depois que a restauração do launch terminou — senão a proteção
-    /// briga com o próprio HiDPI virtual sendo montado.
     private var guardArmed = false
     private var lastReapply: [CGDirectDisplayID: Date] = [:]
     private var reapplyRetries: [CGDirectDisplayID: Int] = [:]
@@ -292,14 +253,9 @@ final class DisplayStore: ObservableObject {
         reapplyRetries[d.id] = 0
     }
 
-    /// Reaplica o estado protegido quando o layout muda por fora.
-    /// Nunca briga com o usuário: 1 correção por minuto e no máximo 1 retry.
-    /// O dono mudou o layout de propósito pelo popover: a proteção passa a
-    /// proteger o estado NOVO (nunca reverte uma ação pedida por ele).
     func userChangedLayout(_ d: DisplayInfo) {
         refresh()
         guard displayConfig(d).protectLayout else { return }
-        // Deixa o sistema assentar antes de fotografar o estado novo.
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(2))
             guard let self else { return }
@@ -312,14 +268,11 @@ final class DisplayStore: ObservableObject {
     func enforceProtection() {
         guard guardArmed else { return }
         for d in displays {
-            // Rotação em confirmação: o dono está decidindo, guarda calada.
             guard rotationPending[d.id] == nil else { continue }
             let cfg = displayConfig(d)
             guard cfg.protectLayout, let saved = cfg.protectedSnapshot else { continue }
             let current = LayoutGuardService.snapshot(d.id)
             var drift = LayoutGuard.diff(saved: saved, current: current)
-            // Com HiDPI virtual ativo o master é uma tela virtual cujo ID muda
-            // a cada launch — não adianta reespelhar pelo ID salvo.
             if HiDPIService.isActive(d.id) { drift.remove(.mirror) }
             guard !drift.isEmpty else {
                 reapplyRetries[d.id] = 0
@@ -334,9 +287,6 @@ final class DisplayStore: ObservableObject {
         }
     }
 
-    // MARK: Rotação (com auto-reversão em 10s, como o macOS)
-
-    /// Rotação pendente de confirmação: displayID → (ângulo anterior, segundos restantes).
     @Published var rotationPending: [CGDirectDisplayID: (previous: Int, seconds: Int)] = [:]
     private var rotationTasks: [CGDirectDisplayID: Task<Void, Never>] = [:]
 
@@ -371,8 +321,6 @@ final class DisplayStore: ObservableObject {
         refresh()
     }
 
-    // MARK: Alta Resolução (HiDPI)
-
     func showAllModes(_ d: DisplayInfo) -> Bool { displayConfig(d).showAllModes }
 
     func setShowAllModes(_ d: DisplayInfo, _ on: Bool) {
@@ -383,10 +331,6 @@ final class DisplayStore: ObservableObject {
         HiDPIService.isActive(d.id) || displayConfig(d).hiDPIVirtual
     }
 
-    /// Liga/desliga o HiDPI por tela virtual espelhada. Sempre reversível:
-    /// o modo anterior do físico fica salvo no config.
-    /// `sharp` = "Nítido 2×": virtual com o dobro dos pixels, lógica igual à nativa.
-    /// Trocar entre normal e nítido com a virtual já ativa desliga e religa.
     func setHiDPIVirtual(_ d: DisplayInfo, _ on: Bool, sharp: Bool? = nil, userInitiated: Bool = true) {
         let wantSharp = sharp ?? displayConfig(d).hiDPISupersample
         if on {
@@ -398,7 +342,6 @@ final class DisplayStore: ObservableObject {
             Task { @MainActor in
                 defer { hiDPIEnabling.remove(d.id) }
                 guard let previous = await HiDPIService.enable(d.id, name: d.name, supersample: wantSharp) else {
-                    // Falha na restauração do launch não apaga a preferência do dono.
                     if userInitiated { updateDisplayConfig(d) { $0.hiDPIVirtual = false } }
                     return
                 }
@@ -420,7 +363,6 @@ final class DisplayStore: ObservableObject {
         HiDPIService.isActive(d.id) && displayConfig(d).hiDPISupersample
     }
 
-    /// Persistência do PIP (o controller não escreve arquivo — quem escreve é aqui).
     private func savePIPConfig(key: String, _ pipConfig: PIPConfig?) {
         var dc = config.displays[key] ?? DisplayConfig()
         dc.pip = pipConfig
@@ -428,8 +370,6 @@ final class DisplayStore: ObservableObject {
         debounced(0) { self.persist() }
     }
 
-    /// Reabre os PIPs marcados como "abrir no lançamento". NUNCA pede permissão
-    /// no boot: sem TCC concedido, simplesmente não abre.
     private func restorePIPs() {
         guard ScreenCapturePermission.granted else { return }
         for anchor in displays {
@@ -443,7 +383,6 @@ final class DisplayStore: ObservableObject {
         }
     }
 
-    /// Desfaz o HiDPI virtual de todos os displays (encerramento do app).
     func teardownHiDPI() {
         for d in displays where HiDPIService.isActive(d.id) {
             HiDPIService.disable(d.id, restoreModeID: displayConfig(d).previousModeID)
@@ -458,4 +397,3 @@ final class DisplayStore: ObservableObject {
         debounced(id) { self.persist() }
     }
 }
-

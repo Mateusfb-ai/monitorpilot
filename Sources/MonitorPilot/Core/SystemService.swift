@@ -3,10 +3,7 @@ import AppKit
 import CoreGraphics
 import IOKit.pwr_mgt
 
-/// Night Shift (CBBlueLightClient), True Tone (CBTrueToneClient), mirror,
-/// soft-disconnect, HDR e prevenção de sleep — as capacidades "de sistema".
 enum SystemService {
-    // MARK: Night Shift (CoreBrightness privado, via ObjC runtime)
 
     private static let blueLight: NSObject? = {
         (NSClassFromString("CBBlueLightClient") as? NSObject.Type)?.init()
@@ -30,8 +27,6 @@ enum SystemService {
         return unsafeBitCast(client.method(for: sel), to: SetStrength.self)(client, sel, min(max(strength, 0), 1), true)
     }
 
-    // MARK: Mirror (API pública)
-
     @discardableResult
     static func setMirror(_ display: CGDirectDisplayID, of master: CGDirectDisplayID?) -> Bool {
         var config: CGDisplayConfigRef?
@@ -49,18 +44,14 @@ enum SystemService {
         return master == kCGNullDirectDisplay ? nil : master
     }
 
-    // MARK: Soft-disconnect (CGSConfigureDisplayEnabled privado)
-
     static var disconnectAvailable: Bool { PrivateAPI.cgsConfigureDisplayEnabled != nil }
 
-    /// Remove/devolve o display ao layout sem tocar no cabo.
-    /// CUIDADO: nunca desconecte o último display conectado.
     @discardableResult
     static func setConnected(_ display: CGDirectDisplayID, _ connected: Bool) -> Bool {
         guard let configure = PrivateAPI.cgsConfigureDisplayEnabled else { return false }
         if !connected {
             let online = DisplayManager.onlineDisplays()
-            guard online.count > 1 else { return false }  // nunca deixar 0 displays
+            guard online.count > 1 else { return false }
         }
         var config: CGDisplayConfigRef?
         guard CGBeginDisplayConfiguration(&config) == .success, let config else { return false }
@@ -70,10 +61,6 @@ enum SystemService {
         }
         return CGCompleteDisplayConfiguration(config, .permanently) == .success
     }
-
-    // MARK: HDR — via MonitorPanel (MPDisplay.preferHDRModes, o mesmo toggle
-    // "High Dynamic Range" de Ajustes › Monitores). SLS só como fallback,
-    // pra quando MonitorPanel.framework não estiver disponível/pronto.
 
     static func hdrSupported(_ display: CGDirectDisplayID) -> Bool {
         if PresetService.display(for: display) != nil { return PresetService.hasHDRModes(display) }
@@ -99,8 +86,6 @@ enum SystemService {
         return set(cid, display, on) == 0
     }
 
-    // MARK: Monitor principal (API pública — reancora origens mantendo o layout)
-
     @discardableResult
     static func setMain(_ id: CGDirectDisplayID) -> Bool {
         guard CGDisplayIsMain(id) == 0 else { return true }
@@ -121,8 +106,6 @@ enum SystemService {
         }
         return CGCompleteDisplayConfiguration(config, .permanently) == .success
     }
-
-    // MARK: Identificação visual (overlay com o nome, 1.5s)
 
     @MainActor private static var identifyPanels: [NSPanel] = []
 
@@ -160,8 +143,6 @@ enum SystemService {
             panels.forEach { $0.orderOut(nil) }
         }
     }
-
-    // MARK: Prevenção de sleep (IOPMAssertion, público)
 
     private static var sleepAssertion: IOPMAssertionID = 0
 

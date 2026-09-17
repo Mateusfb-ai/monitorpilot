@@ -2,9 +2,6 @@ import SwiftUI
 import CoreGraphics
 import AppKit
 
-// Popover estilo BetterDisplay: card por display (header + sliders),
-// lista de submenus com ícone + chevron, footer com ações.
-
 struct MenuView: View {
     @ObservedObject var store: DisplayStore
 
@@ -51,8 +48,6 @@ struct MenuView: View {
     }
 }
 
-// MARK: Card do display (header cinza + sliders, como no BetterDisplay)
-
 private struct DisplayCard: View {
     let display: DisplayInfo
     @ObservedObject var store: DisplayStore
@@ -60,7 +55,6 @@ private struct DisplayCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header
             HStack(spacing: 8) {
                 Image(systemName: display.isBuiltin ? "laptopcomputer" : "display")
                 Text(display.name).font(.system(.body, weight: .semibold))
@@ -76,7 +70,6 @@ private struct DisplayCard: View {
             Divider().padding(.horizontal, 10)
 
             VStack(alignment: .leading, spacing: 10) {
-                // Brilho combinado
                 VStack(alignment: .leading, spacing: 2) {
                     HStack {
                         Text(brightnessLabel).font(.caption).foregroundStyle(.secondary)
@@ -95,7 +88,6 @@ private struct DisplayCard: View {
                     )
                 }
 
-                // Resolução (slider sobre a escada de resoluções)
                 ResolutionSliderRow(display: display, store: store)
 
                 DisclosureGroup(isExpanded: $showSubmenus.animation(.snappy(duration: 0.28))) {
@@ -118,8 +110,6 @@ private struct DisplayCard: View {
             ? "Brilho (Combinado, Upscaling)" : "Brilho (Combinado, Realce SDR)"
     }
 }
-
-// MARK: Slider de resolução
 
 private struct ResolutionSliderRow: View {
     let display: DisplayInfo
@@ -181,8 +171,6 @@ private struct ResolutionSliderRow: View {
     }
 }
 
-// MARK: Lista de submenus (linhas com ícone + chevron/menu)
-
 private struct SubmenuList: View {
     let display: DisplayInfo
     @ObservedObject var store: DisplayStore
@@ -209,9 +197,6 @@ private struct SubmenuList: View {
         )
     }
 
-    /// Recorte normalizado [x, y, largura, altura]. O slider mexe num rascunho
-    /// local e só COMMITA ao soltar — commitar por tick recriaria a config da
-    /// stream dezenas de vezes por arrasto.
     private func currentCrop() -> [Double] {
         let c = pip.session(for: anchorKey)?.config.crop
             ?? CGRect(x: 0, y: 0, width: 1, height: 1)
@@ -258,7 +243,6 @@ private struct SubmenuList: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            // Modo de exibição
             RowMenu(icon: "rectangle.on.rectangle", title: "Modo de exibição") {
                 Toggle("Mostrar todos (HiDPI)", isOn: Binding(
                     get: { store.showAllModes(display) },
@@ -278,7 +262,6 @@ private struct SubmenuList: View {
                 }
             }
 
-            // Taxa de atualização
             RowMenu(icon: "gauge.with.dots.needle.67percent", title: "Taxa de atualização") {
                 let current = ModeService.modes(for: display.id, showAll: store.showAllModes(display))
                     .first(where: \.isCurrent)
@@ -296,7 +279,6 @@ private struct SubmenuList: View {
                 }
             }
 
-            // Modo de cor (perfis ICC — ColorSync público)
             RowMenu(icon: "paintpalette", title: "Modo de cor",
                     detail: store.colorProfileName[display.id]) {
                 Button("Padrão de fábrica") {
@@ -316,7 +298,6 @@ private struct SubmenuList: View {
                 }
             }
 
-            // Espelhamento
             RowMenu(icon: "rectangle.on.rectangle.angled", title: "Espelhamento do Monitor") {
                 ForEach(store.displays.filter { $0.id != display.id }) { other in
                     Button("Espelhar de \(other.name)") {
@@ -332,7 +313,6 @@ private struct SubmenuList: View {
                 }
             }
 
-            // Monitor de Transmissão (ScreenCaptureKit + tela virtual)
             RowMenu(icon: "rectangle.inset.filled.on.rectangle", title: "Monitor de Transmissão",
                     detail: streams.session(source: display.id) != nil ? "ao vivo" : nil) {
                 Button("Transmitir esta tela para uma tela virtual") {
@@ -361,7 +341,6 @@ private struct SubmenuList: View {
                 }
             }
 
-            // PIP — janela flutuante com a captura ao vivo de outra tela
             RowMenu(icon: "pip", title: "PIP",
                     detail: pip.isActive(anchorKey) ? "ativo" : nil) {
                 ForEach(store.displays.filter { $0.id != display.id }) { other in
@@ -414,7 +393,6 @@ private struct SubmenuList: View {
                 }
             }
 
-            // Mover monitor no layout (API pública CGConfigureDisplayOrigin)
             if store.displays.count > 1 {
                 RowMenu(icon: "arrow.up.and.down.and.arrow.left.and.right", title: "Mover Monitor") {
                     ForEach(store.displays.filter { $0.id != display.id }) { other in
@@ -430,8 +408,6 @@ private struct SubmenuList: View {
                 }
             }
 
-            // Rotação (escrita via MPDisplay.setOrientation:, com confirmação
-            // de 10s que reverte sozinha — igual ao macOS).
             RowMenu(icon: "rotate.right", title: "Rotação da Tela",
                     detail: "\(RotationService.current(display.id))°") {
                 if !RotationService.ready {
@@ -467,7 +443,6 @@ private struct SubmenuList: View {
                 .padding(.vertical, 3).padding(.horizontal, 4)
             }
 
-            // Ajustes de imagem (inline)
             RowDisclosure(icon: "photo.on.rectangle.angled", title: "Ajustes de Imagem",
                           isExpanded: $showImageAdjustments) {
                 VStack(spacing: 6) {
@@ -484,7 +459,6 @@ private struct SubmenuList: View {
                 .padding(.leading, 24)
             }
 
-            // Predefinições Apple (XDR reference modes) via MonitorPanel
             if let presets = store.presets[display.id], !presets.isEmpty {
                 RowMenu(icon: "slider.horizontal.2.square", title: "Predefinição de XDR") {
                     ForEach(presets) { p in
@@ -504,13 +478,11 @@ private struct SubmenuList: View {
                 }
             }
 
-            // Proteção de configuração
             RowToggle(icon: "lock.shield", title: "Proteger configuração", isOn: Binding(
                 get: { store.layoutProtected(display) },
                 set: { store.setLayoutProtection(display, $0) }
             ))
 
-            // Gerenciar monitor
             RowMenu(icon: "gearshape.2", title: "Gerenciar Monitor") {
                 Button("Identificar visualmente") { SystemService.identifyDisplays() }
                 if !display.isBuiltin, SystemService.disconnectAvailable {
@@ -532,7 +504,6 @@ private struct SubmenuList: View {
             }
 
             if let hidpi = store.hiDPIToggle[display.id] {
-                // Display com HiDPI nativo: alterna com o modo gêmeo sem HiDPI.
                 RowToggle(icon: "square.resize.up", title: "Alta Resolução (HiDPI)", isOn: Binding(
                     get: { hidpi.isHiDPI },
                     set: {
@@ -541,7 +512,6 @@ private struct SubmenuList: View {
                     }
                 ))
             } else if HiDPIService.isAvailable {
-                // Sem HiDPI nativo: caminho tela virtual espelhada.
                 RowToggle(icon: "square.resize.up", title: "Alta Resolução (tela virtual)",
                           isOn: Binding(
                     get: { store.hiDPIVirtualOn(display) && !store.hiDPISharpOn(display) },
@@ -550,9 +520,6 @@ private struct SubmenuList: View {
             }
 
             if HiDPIService.isAvailable {
-                // "Nítido 2×": virtual com o dobro dos pixels do painel, espelhada em
-                // downscale — a resolução lógica fica a nativa, renderizada em 2×.
-                // É o que faz um 1080p parecer Retina (Dell 1080×1920 → 1080×1920 nítido).
                 let (lw, lh) = HiDPIService.sharpLogicalSize(display.id)
                 RowToggle(icon: "sparkles.rectangle.stack", title: "Nítido 2× (\(lw)×\(lh))",
                           isOn: Binding(
@@ -568,7 +535,6 @@ private struct SubmenuList: View {
                 ))
             }
 
-            // Linhas de ação direta
             if !display.isMain {
                 RowButton(icon: "m.circle", title: "Definir como Monitor Principal") {
                     SystemService.setMain(display.id)
@@ -626,8 +592,6 @@ private struct SubmenuList: View {
         }
     }
 }
-
-// MARK: Componentes de linha (estilo BetterDisplay: ícone + título + chevron)
 
 private struct RowMenu<Content: View>: View {
     let icon: String
@@ -729,8 +693,6 @@ private struct RowIcon: View {
             .background(.tint.opacity(0.85), in: RoundedRectangle(cornerRadius: 5))
     }
 }
-
-// MARK: Slider com ícone (compartilhado com a janela de Ajustes)
 
 struct LabeledSlider: View {
     let icon: String

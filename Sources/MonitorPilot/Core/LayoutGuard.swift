@@ -1,16 +1,14 @@
 import Foundation
 import CoreGraphics
 
-/// Fotografia do estado protegido de um display.
 struct DisplaySnapshot: Codable, Equatable {
     var modeID: Int32?
     var originX: Int
     var originY: Int
     var rotation: Int
-    var mirrorMaster: UInt32?   // displayID do master, ou nil = sem espelho
+    var mirrorMaster: UInt32?
 }
 
-/// Comparação pura: o que saiu do lugar entre o salvo e o atual.
 enum LayoutGuard {
     enum Field: String, CaseIterable {
         case mode, origin, rotation, mirror
@@ -25,8 +23,6 @@ enum LayoutGuard {
         return out
     }
 
-    /// Pode reaplicar agora? Nunca briga com o usuário: no máximo 1 correção
-    /// por minuto por display.
     static func shouldReapply(lastReapply: Date?, now: Date = Date(), cooldown: TimeInterval = 60) -> Bool {
         guard let lastReapply else { return true }
         return now.timeIntervalSince(lastReapply) >= cooldown
@@ -45,7 +41,6 @@ enum LayoutGuardService {
             mirrorMaster: SystemService.mirrorMaster(id))
     }
 
-    /// Reaplica só o que saiu do lugar. Devolve os campos corrigidos.
     @discardableResult
     static func reapply(_ id: CGDirectDisplayID, saved: DisplaySnapshot,
                         fields: Set<LayoutGuard.Field>) -> Set<LayoutGuard.Field>

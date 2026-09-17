@@ -1,5 +1,4 @@
 #!/bin/zsh
-# Empacota o MonitorPilot como .app de menu bar (LSUIElement) com assinatura ad-hoc.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -26,10 +25,7 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>LSUIElement</key><true/>
     <key>CFBundleIconFile</key><string>AppIcon</string>
-    <key>NSHumanReadableCopyright</key><string>MonitorPilot — uso pessoal</string>
-    <!-- Gravação de Tela (PIP / Monitor de Transmissão): o TCC do ScreenCapture
-         NÃO tem chave de usage description oficial (o macOS usa o nome do app no
-         diálogo). Mantido só como documentação da intenção. -->
+    <key>NSHumanReadableCopyright</key><string>© 2026 MonitorPilot contributors — MIT</string>
     <key>NSScreenCaptureUsageDescription</key><string>Exibir outra tela em PIP e transmitir telas.</string>
 </dict>
 </plist>

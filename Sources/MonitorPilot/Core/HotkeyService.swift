@@ -2,9 +2,6 @@ import Foundation
 import Carbon.HIToolbox
 import AppKit
 
-/// Atalhos globais via Carbon RegisterEventHotKey — NÃO exige permissão
-/// de Acessibilidade (diferente de CGEventTap).
-/// Padrão: ⌥⌘↑/↓ = brilho do display principal · ⌥⌘←/→ = brilho do display com o mouse.
 @MainActor
 enum HotkeyService {
     struct Hotkey {
@@ -35,7 +32,6 @@ enum HotkeyService {
 
     private enum Target { case main, withMouse }
 
-    /// Conectado pelo DisplayStore no launch — mantém slider e config em dia.
     static var setBrightnessHook: ((CGDirectDisplayID, Float) -> Void)?
 
     private static func adjustBrightness(_ delta: Float, target: Target) {
@@ -72,7 +68,7 @@ enum HotkeyService {
     static func register(keyCode: UInt32, modifiers: UInt32, action: @escaping () -> Void) {
         installHandlerIfNeeded()
         let id = UInt32(hotkeys.count + 1)
-        var hotKeyID = EventHotKeyID(signature: OSType(0x53504B44) /* "SPKD" */, id: id)
+        var hotKeyID = EventHotKeyID(signature: OSType(0x53504B44) , id: id)
         var ref: EventHotKeyRef?
         guard RegisterEventHotKey(keyCode, modifiers, hotKeyID, GetEventDispatcherTarget(), 0, &ref) == noErr else {
             return

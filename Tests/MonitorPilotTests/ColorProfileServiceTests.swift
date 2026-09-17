@@ -1,7 +1,6 @@
 import XCTest
 @testable import MonitorPilot
 
-/// Só leitura (ColorSync público) — nenhum teste troca perfil do display.
 final class ColorProfileServiceTests: XCTestCase {
     func testInstalledProfilesAreUniqueAndSorted() {
         let profiles = ColorProfileService.installedProfiles()

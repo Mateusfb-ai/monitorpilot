@@ -34,7 +34,6 @@ final class CLITests: XCTestCase {
     }
 
     func testDDCChecksum() {
-        // Pacote de escrita: seed 0x6E^0x51, XOR dos 5 primeiros bytes.
         let packet: [UInt8] = [0x84, 0x03, 0x10, 0x00, 0x32, 0x00]
         let chk = DDCService.checksum(0x6E ^ 0x51, packet, upTo: 5)
         XCTAssertEqual(chk, 0x6E ^ 0x51 ^ 0x84 ^ 0x03 ^ 0x10 ^ 0x00 ^ 0x32)

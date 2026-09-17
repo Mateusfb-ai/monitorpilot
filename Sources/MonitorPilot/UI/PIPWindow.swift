@@ -1,9 +1,6 @@
 import AppKit
 import AVFoundation
 
-/// Janela do PIP: painel sem barra de título, flutuante, redimensionável pelas
-/// bordas, arrastável pelo fundo, com opacidade e "atravessar cliques".
-/// Nunca entra na própria captura (`sharingType = .none`).
 @MainActor
 final class PIPPanel: NSPanel {
     private let onFrameChange: (CGRect) -> Void
@@ -21,7 +18,6 @@ final class PIPPanel: NSPanel {
         backgroundColor = .clear
         hasShadow = true
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        // não aparece em captura nenhuma (anti-recursão); MONITORPILOT_DEBUG libera pra screenshot de teste
         sharingType = ProcessInfo.processInfo.environment["MONITORPILOT_DEBUG"] != nil ? .readOnly : .none
         contentAspectRatio = NSSize(width: max(aspect.width, 1), height: max(aspect.height, 1))
         minSize = NSSize(width: 160, height: 90)
@@ -45,6 +41,5 @@ final class PIPPanel: NSPanel {
         contentView = view
     }
 
-    /// Fecha ESC quando a janela tem foco.
     override func cancelOperation(_ sender: Any?) { close() }
 }

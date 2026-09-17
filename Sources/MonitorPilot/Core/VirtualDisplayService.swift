@@ -3,23 +3,19 @@ import ObjectiveC
 import AppKit
 import CoreGraphics
 
-/// Telas virtuais via classes privadas CGVirtualDisplay* (receita BetterDummy),
-/// acessadas por ObjC runtime (NSClassFromString + KVC + objc_msgSend) —
-/// nada linkado, macOS sem as classes = feature indisponível, app segue vivo.
 @MainActor
 final class VirtualScreen: Identifiable {
     let id = UUID()
     let name: String
     let aspectWidth: Int
     let aspectHeight: Int
-    private var display: NSObject?  // CGVirtualDisplay (retido = tela viva)
+    private var display: NSObject?
 
     var displayID: CGDirectDisplayID? {
         (display?.value(forKey: "displayID") as? NSNumber)?.uint32Value
     }
 
     convenience init?(name: String, aspectWidth: Int, aspectHeight: Int, hiDPI: Bool) {
-        // Escada por múltiplos do aspect ratio (uso genérico "tela extra").
         let maxW = aspectWidth * (3840 / max(aspectWidth, 1))
         let maxH = aspectHeight * (3840 / max(aspectWidth, 1))
         var list: [(Int, Int)] = []
@@ -33,9 +29,6 @@ final class VirtualScreen: Identifiable {
                   hiDPI: hiDPI, pixelModes: list, maxPixelsWide: maxW, maxPixelsHigh: maxH)
     }
 
-    /// Init explícito em pixels — usado pelo HiDPI virtual, onde a tela precisa
-    /// ter exatamente o tamanho de pixels do display físico (a escada por
-    /// aspect ratio nunca acerta ultrawides tipo 3440×1440).
     init?(name: String, aspectWidth: Int, aspectHeight: Int, hiDPI: Bool,
           pixelModes: [(Int, Int)], maxPixelsWide: Int, maxPixelsHigh: Int) {
         self.name = name
@@ -56,8 +49,8 @@ final class VirtualScreen: Identifiable {
         descriptor.setValue(maxW, forKey: "maxPixelsWide")
         descriptor.setValue(maxH, forKey: "maxPixelsHigh")
         descriptor.setValue(NSValue(size: NSSize(width: 600, height: Double(600 * aspectHeight) / Double(aspectWidth))), forKey: "sizeInMillimeters")
-        descriptor.setValue(0x5350, forKey: "vendorID")     // "SP"
-        descriptor.setValue(0x594B, forKey: "productID")    // "YK"
+        descriptor.setValue(0x5350, forKey: "vendorID")
+        descriptor.setValue(0x594B, forKey: "productID")
         descriptor.setValue(UInt32.random(in: 1...0xFFFF), forKey: "serialNum")
         descriptor.setValue(DispatchQueue.main, forKey: "queue")
 
@@ -68,7 +61,6 @@ final class VirtualScreen: Identifiable {
         let initFn = unsafeBitCast(alloc.method(for: initSel), to: InitWithDescriptor.self)
         guard let vDisplay = initFn(alloc, initSel, descriptor) else { return nil }
 
-        // Gera modos: múltiplos do aspect ratio, HiDPI opcional
         typealias InitMode = @convention(c) (NSObject, Selector, UInt, UInt, Double) -> NSObject?
         let modeSel = NSSelectorFromString("initWithWidth:height:refreshRate:")
         var modes: [NSObject] = []
@@ -80,7 +72,7 @@ final class VirtualScreen: Identifiable {
         guard !modes.isEmpty else { return nil }
 
         let settings = settingsClass.init()
-        settings.setValue(hiDPI ? 1 : 0, forKey: "hiDPI")   // 1 = liga (semântica documentada em BetterDummy); sonda 12/set: 1 e 2 expõem HiDPI
+        settings.setValue(hiDPI ? 1 : 0, forKey: "hiDPI")
         settings.setValue(modes, forKey: "modes")
 
         typealias ApplySettings = @convention(c) (NSObject, Selector, NSObject) -> Bool
@@ -92,7 +84,7 @@ final class VirtualScreen: Identifiable {
         self.display = vDisplay
     }
 
-    func destroy() { display = nil }  // soltar a referência desconecta a tela
+    func destroy() { display = nil }
 }
 
 @MainActor
@@ -100,16 +92,12 @@ final class VirtualDisplayService: ObservableObject {
     static let shared = VirtualDisplayService()
     @Published private(set) var screens: [VirtualScreen] = []
 
-    /// É uma tela virtual nossa? (vendor "SP" = 0x5350, gravado no descriptor)
-    /// — cobre as do PIP/stream e as do HiDPI virtual, mesmo as que já
-    /// saíram de `screens` (o WindowServer ainda pode listá-las por um instante).
     func isVirtual(_ id: CGDirectDisplayID) -> Bool {
         CGDisplayVendorNumber(id) == 0x5350 || screens.contains { $0.displayID == id }
     }
 
     static var isAvailable: Bool { NSClassFromString("CGVirtualDisplay") != nil }
 
-    /// Tela virtual com tamanho de pixels explícito (base do HiDPI virtual).
     @discardableResult
     func create(name: String, pixelModes: [(Int, Int)], maxPixelsWide: Int, maxPixelsHigh: Int,
                 hiDPI: Bool = true) -> VirtualScreen? {

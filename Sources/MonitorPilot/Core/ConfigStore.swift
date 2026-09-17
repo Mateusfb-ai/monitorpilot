@@ -1,26 +1,23 @@
 import Foundation
 import CoreGraphics
 
-/// Config em arquivo de texto versionável (~/.config/monitorpilot/config.json) —
-/// decisão do blueprint: nada de estado espalhado em plist/NVRAM.
-/// Displays são identificados por vendor:model:serial (sobrevive a displayID mudar).
 struct DisplayConfig: Codable {
     var color: ColorAdjustments = .neutral
     var lastBrightness: Float?
-    var upscalingEnabled: Bool = false     // ampliação de brilho (XDR)
-    var combinedSwitchpoint: Float = 0.5   // ponto de comutação sw/hw no slider combinado
-    var maxBoostPercent: Float = 160       // teto do upscaling na escala combinada
-    var minHardwareBrightness: Float = 0.05 // piso de hardware (0 apagaria o backlight)
-    var hdr: Bool?                          // nil = não gerenciado; senão, estado desejado
-    var showAllModes: Bool = false          // lista modos ocultos (HiDPI) no menu/slider
-    var hiDPIVirtual: Bool = false          // HiDPI por tela virtual espelhada
-    var hiDPISupersample: Bool = false      // virtual com 2× os pixels do painel: lógica = nativa, nítida
-    var previousModeID: Int32?              // modo do físico antes do HiDPI virtual
-    var protectLayout: Bool = false         // reaplica modo/posição/rotação/espelho se derem drift
-    var protectedSnapshot: DisplaySnapshot? // estado protegido
-    var pip: PIPConfig?                     // PIP ancorado NESTE display (janela flutuante)
-    var lastDisplayID: UInt32?              // último CGDirectDisplayID visto (pra religar via CGS)
-    var softDisconnected: Bool = false      // dono desconectou de propósito ("Desconectar (soft)")
+    var upscalingEnabled: Bool = false
+    var combinedSwitchpoint: Float = 0.5
+    var maxBoostPercent: Float = 160
+    var minHardwareBrightness: Float = 0.05
+    var hdr: Bool?
+    var showAllModes: Bool = false
+    var hiDPIVirtual: Bool = false
+    var hiDPISupersample: Bool = false
+    var previousModeID: Int32?
+    var protectLayout: Bool = false
+    var protectedSnapshot: DisplaySnapshot?
+    var pip: PIPConfig?
+    var lastDisplayID: UInt32?
+    var softDisconnected: Bool = false
 
     init() {}
     init(from decoder: Decoder) throws {
@@ -44,8 +41,6 @@ struct DisplayConfig: Codable {
     }
 }
 
-/// Estado de um PIP (janela flutuante com a captura ao vivo de outra tela).
-/// `sourceDisplayKey` é a chave estável (vendor:model:serial) da FONTE.
 struct PIPConfig: Codable {
     var sourceDisplayKey: String = ""
     var frame: CGRect = CGRect(x: 60, y: 60, width: 480, height: 270)
@@ -54,7 +49,6 @@ struct PIPConfig: Codable {
     var alwaysOnTop: Bool = true
     var showCursor: Bool = false
     var autoStart: Bool = false
-    /// Recorte normalizado (0…1) na fonte; nil = tela inteira.
     var crop: CGRect?
 
     init() {}

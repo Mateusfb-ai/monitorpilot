@@ -2,9 +2,6 @@ import Foundation
 import CoreGraphics
 import ObjectiveC
 
-/// Sonda READ-ONLY do MonitorPanel: imprime as assinaturas (type encoding) dos
-/// seletores que chamamos por IMP tipado. Nunca escreve nada no display.
-/// Uso: `MonitorPilot mp-probe`.
 enum MPProbe {
     private static let selectors = [
         "setOrientation:", "orientation", "canChangeOrientation",

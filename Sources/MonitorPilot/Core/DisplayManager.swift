@@ -46,7 +46,6 @@ enum DisplayManager {
         return CGDisplayIsBuiltin(id) != 0 ? "Tela interna" : "Display \(id)"
     }
 
-    /// Resolve seletor da CLI: vazio = display principal; número = displayID; texto = busca por nome.
     static func resolve(_ selector: String?) -> DisplayInfo? {
         let all = onlineDisplays()
         guard let selector, !selector.isEmpty else {

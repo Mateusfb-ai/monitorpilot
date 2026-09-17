@@ -20,7 +20,7 @@ final class HiDPIPlannerTests: XCTestCase {
     func testClampsToBaseCapKeepingAspect() {
         let p = HiDPIPlanner.plan(nativeW: 7680, nativeH: 2160)
         XCTAssertEqual(p.virtualW, 6144)
-        XCTAssertEqual(p.virtualH, 1728)  // 2160 * 6144/7680
+        XCTAssertEqual(p.virtualH, 1728)
         XCTAssertEqual(p.logicalW, 3072)
     }
 
@@ -55,7 +55,7 @@ final class HiDPIPlannerTests: XCTestCase {
 
     func testSupersampleClampsToCap() {
         let p = HiDPIPlanner.plan(nativeW: 3840, nativeH: 2160, cap: HiDPIPlanner.baseCap, supersample: true)
-        XCTAssertEqual(p.virtualW, 6144)   // 7680 estoura o teto base
+        XCTAssertEqual(p.virtualW, 6144)
         XCTAssertEqual(p.virtualH, 3456)
         XCTAssertEqual(p.logicalW, 3072)
     }

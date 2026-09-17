@@ -2,7 +2,6 @@ import SwiftUI
 import AppKit
 import CoreGraphics
 
-/// Janela de ajustes no padrão do app Ajustes do Sistema: sidebar + painéis.
 @MainActor
 final class SettingsWindowManager {
     static let shared = SettingsWindowManager()
@@ -51,8 +50,6 @@ struct SettingsRootView: View {
         .frame(minWidth: 680, minHeight: 440)
     }
 }
-
-// MARK: Displays
 
 struct DisplaysPaneView: View {
     @ObservedObject var store: DisplayStore
@@ -197,8 +194,6 @@ private struct ModeRow: View {
     }
 }
 
-// MARK: Cor
-
 struct ColorPaneView: View {
     @ObservedObject var store: DisplayStore
 
@@ -237,8 +232,6 @@ struct ColorPaneView: View {
         }
     }
 }
-
-// MARK: Telas virtuais
 
 struct VirtualsPaneView: View {
     @ObservedObject var virtuals: VirtualDisplayService
@@ -285,8 +278,6 @@ struct VirtualsPaneView: View {
         .formStyle(.grouped)
     }
 }
-
-// MARK: Sistema
 
 struct SystemPaneView: View {
     @ObservedObject var store: DisplayStore

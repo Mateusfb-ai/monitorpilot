@@ -1,7 +1,6 @@
 import SwiftUI
 import AppKit
 
-/// OSD estilo Apple: painel flutuante com material, ícone SF Symbol e barra de nível.
 @MainActor
 enum OSD {
     private static var panel: NSPanel?

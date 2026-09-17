@@ -2,16 +2,6 @@ import Foundation
 import CoreGraphics
 import AppKit
 
-/// CLI no mesmo vocabulário do BetterDisplay (get/set + feature), simplificado.
-///
-///   monitorpilot list
-///   monitorpilot modes [display]
-///   monitorpilot get brightness [display]
-///   monitorpilot set brightness 0.8 [display]
-///   monitorpilot set software-brightness 0.7 [display]
-///   monitorpilot set mode <modeID> [display]
-///   monitorpilot ddc get brightness [display]
-///   monitorpilot ddc set brightness 70 [display]
 enum CLI {
     struct Command {
         var operation: String
@@ -28,28 +18,23 @@ enum CLI {
         case "list", "restore-gamma":
             return Command(operation: op, feature: nil, value: nil, display: a.first)
         case "mirror", "unmirror", "connect", "disconnect", "hdr", "nightshift", "rotation":
-            // mirror <display> <master> | unmirror <display> | connect/disconnect <display>
-            // hdr <on|off> [display] | nightshift <on|off|0-1> | rotation [display]
             return Command(operation: op, feature: a.first, value: a.count > 1 ? a[1] : nil,
                            display: a.first)
         case "modes":
             return Command(operation: op, feature: nil, value: nil, display: a.first)
         case "pip":
-            // pip <fonte> [--of <display>] | pip off
             guard let source = a.first else { return nil }
             if source == "off" { return Command(operation: op, feature: "off", value: nil, display: nil) }
             var anchor: String?
             if let i = a.firstIndex(of: "--of"), i + 1 < a.count { anchor = a[i + 1] }
             return Command(operation: op, feature: source, value: nil, display: anchor)
         case "stream":
-            // stream <fonte> --to virtual | stream off
             guard let source = a.first else { return nil }
             if source == "off" { return Command(operation: op, feature: "off", value: nil, display: nil) }
             var target: String?
             if let i = a.firstIndex(of: "--to"), i + 1 < a.count { target = a[i + 1] }
             return Command(operation: op, feature: source, value: target, display: nil)
         case "preset":
-            // preset list [display] | preset set <índice> [display]
             return Command(operation: op, feature: a.first, value: a.count > 1 ? a[1] : nil,
                            display: a.count > 2 ? a[2] : nil)
         case "get":
@@ -63,7 +48,7 @@ enum CLI {
         case "ddc":
             if a == ["ports"] { return Command(operation: "ddc-ports", feature: nil, value: nil, display: nil) }
             guard a.count >= 2 else { return nil }
-            let sub = a.removeFirst() // get | set
+            let sub = a.removeFirst()
             let feature = a.removeFirst()
             let value = sub == "set" ? a.first : nil
             let display = sub == "set"
@@ -121,15 +106,11 @@ enum CLI {
             case "brightness":
                 guard let v = parseLevel(cmd.value) else { return fail("valor inválido") }
                 guard BrightnessService.hasHardwarePath(d.id) else {
-                    // Sem hardware (DDC mudo) o caminho é gamma — só no app residente.
                     return postBrightness(d.id, v, software: false)
                         ? 0 : fail("display sem brilho por hardware e app de menu bar fechado — abra o MonitorPilot.app")
                 }
                 return BrightnessService.setBrightness(d.id, v) ? 0 : fail("set falhou")
             case "software-brightness":
-                // O WindowServer reseta a gamma table quando o processo que a definiu
-                // encerra (verificado). Dimming por software só funciona no app residente:
-                // a CLI pede pra ele aplicar (notificação distribuída).
                 guard let v = parseLevel(cmd.value) else { return fail("valor inválido") }
                 return postBrightness(d.id, v, software: true)
                     ? 0 : fail("app de menu bar não está rodando (abra o MonitorPilot.app)")
@@ -169,7 +150,6 @@ enum CLI {
 
         case "connect", "disconnect":
             let on = cmd.operation == "connect"
-            // Display desconectado não está online: `connect <id numérico>` usa o id cru.
             let id: CGDirectDisplayID
             if let d = DisplayManager.resolve(cmd.feature) { id = d.id }
             else if on, let raw = cmd.feature.flatMap(UInt32.init) { id = raw }
@@ -250,9 +230,6 @@ enum CLI {
     static let brightnessNotification = Notification.Name("app.monitorpilot.brightness.set")
     static let bundleID = "app.monitorpilot"
 
-    /// Pede ao app residente pra aplicar brilho (gamma quando `software`, senão
-    /// o caminho combinado normal). Devolve false se o app não está rodando —
-    /// notificação distribuída não tem ack, então checa o processo antes.
     static func postBrightness(_ id: CGDirectDisplayID, _ value: Float, software: Bool) -> Bool {
         guard !NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).isEmpty else { return false }
         DistributedNotificationCenter.default().postNotificationName(
@@ -263,15 +240,10 @@ enum CLI {
         return true
     }
 
-    /// Nome da notificação distribuída que fecha PIP/transmissão em qualquer
-    /// processo do app (o menu bar e um CLI residente escutam os dois).
     static func offNotification(_ kind: String) -> Notification.Name {
         Notification.Name("app.monitorpilot.\(kind).off")
     }
 
-    /// PIP e transmissão precisam de uma janela viva: o processo fica residente
-    /// (Ctrl-C encerra) — mesma razão pela qual `software-brightness` não roda
-    /// solto na CLI. `pip off` / `stream off` só avisam quem está segurando.
     private static func runCapture(_ cmd: Command) -> Int32 {
         let kind = cmd.operation
         if cmd.feature == "off" {
@@ -325,13 +297,10 @@ enum CLI {
             }
             exit(0)
         }
-        // NSApp.run (não RunLoop.run): só de dentro dele o AppKit entrega
-        // arrastar/redimensionar pra janela do PIP.
         NSApplication.shared.run()
         return 0
     }
 
-    /// Aceita 0…1, porcentagem ("80%") ou 0…100.
     static func parseLevel(_ raw: String?) -> Float? {
         guard var raw else { return nil }
         var percent = false

@@ -1,23 +1,19 @@
 import Foundation
 import CoreGraphics
 
-/// Ajustes de cor por software via gamma table (API pública) —
-/// o mesmo mecanismo do BetterDisplay para gamma/gain/temperatura/contraste.
-/// Só tem efeito enquanto o app residente vive (WindowServer reseta no exit).
 struct ColorAdjustments: Codable, Equatable {
-    var brightness: Float = 1.0   // escala geral (dimming)
-    var contrast: Float = 0.0     // -1…1 (0 = neutro)
-    var temperature: Float = 0.0  // -1 (frio) … 1 (quente); 0 = neutro
+    var brightness: Float = 1.0
+    var contrast: Float = 0.0
+    var temperature: Float = 0.0
     var gainR: Float = 1.0
     var gainG: Float = 1.0
     var gainB: Float = 1.0
-    var gamma: Float = 1.0        // expoente extra (1 = neutro)
-    var boost: Float = 1.0        // upscaling XDR: >1 empurra SDR pra faixa EDR
+    var gamma: Float = 1.0
+    var boost: Float = 1.0
 
     static let neutral = ColorAdjustments()
     var isNeutral: Bool { self == .neutral }
 
-    // Decode tolerante: config antiga sem `boost` continua válida.
     init() {}
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -49,23 +45,19 @@ enum ColorService {
         return table
     }
 
-    /// Multiplicadores RGB por temperatura (aprox. Planck simplificado: quente corta azul, frio corta vermelho).
     static func temperatureScales(_ t: Float) -> (r: Float, g: Float, b: Float) {
         let t = min(max(t, -1), 1)
-        if t >= 0 { return (1, 1 - 0.15 * t, 1 - 0.45 * t) }   // quente
-        return (1 + 0.35 * t, 1 + 0.10 * t, 1)                  // frio (t negativo)
+        if t >= 0 { return (1, 1 - 0.15 * t, 1 - 0.45 * t) }
+        return (1 + 0.35 * t, 1 + 0.10 * t, 1)
     }
 
-    /// Curva final por canal: v' = ((curva_contraste(v))^gamma) * ganho * temperatura * brilho
     static func transform(_ v: Float, adj: ColorAdjustments, channelGain: Float, tempScale: Float) -> Float {
         var x = min(max(v, 0), 1)
         if adj.contrast != 0 {
-            // contraste em torno de 0.5: c>0 aumenta inclinação, c<0 achata
             let slope = adj.contrast >= 0 ? 1 + 3 * adj.contrast : 1 + adj.contrast * 0.9
             x = min(max((x - 0.5) * slope + 0.5, 0), 1)
         }
         if adj.gamma != 1 { x = pow(x, 1 / max(adj.gamma, 0.1)) }
-        // boost > 1 = upscaling XDR: deixa a curva passar de 1.0 (faixa EDR).
         let ceiling = max(adj.boost, 1)
         return min(x * channelGain * tempScale * adj.brightness * adj.boost, ceiling)
     }
@@ -88,8 +80,6 @@ enum ColorService {
         return true
     }
 
-    /// Troca de preset Apple carrega tabela de fábrica NOVA (cada preset tem a
-    /// sua) e zera a atual — o cache velho vira lixo. Chame após setPreset.
     static func invalidateFactoryTable(_ id: CGDirectDisplayID) {
         factory[id] = nil
     }

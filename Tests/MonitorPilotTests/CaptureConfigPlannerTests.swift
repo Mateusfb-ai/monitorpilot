@@ -18,7 +18,7 @@ final class CaptureConfigPlannerTests: XCTestCase {
     func testClampsToMaxKeepingAspect() {
         let s = CaptureConfigPlanner.size(forPixels: CGSize(width: 7680, height: 2160), scale: 1)
         XCTAssertEqual(s.width, 4096)
-        XCTAssertEqual(s.height, 1152)  // 2160 * 4096/7680
+        XCTAssertEqual(s.height, 1152)
     }
 
     func testAlwaysEvenAndNonZero() {
@@ -78,7 +78,6 @@ final class PIPConfigCodingTests: XCTestCase {
         XCTAssertEqual(back.crop, c.crop)
     }
 
-    /// Config antigo (sem a chave `pip`) precisa continuar decodificando.
     func testLegacyDisplayConfigWithoutPIP() throws {
         let json = Data(#"{"upscalingEnabled":true}"#.utf8)
         let dc = try JSONDecoder().decode(DisplayConfig.self, from: json)

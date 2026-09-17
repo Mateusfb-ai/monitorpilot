@@ -17,7 +17,6 @@ struct Entry {
             exit(MPProbe.run())
         }
         if args == ["virtual-test"] {
-            // Prova viva: cria tela virtual, confirma na lista, destrói.
             let before = DisplayManager.onlineDisplays().count
             guard let screen = MainActor.assumeIsolated({
                 VirtualDisplayService.shared.create(name: "MonitorPilot Teste", aspectWidth: 16, aspectHeight: 9)
@@ -35,7 +34,6 @@ struct Entry {
             exit(during.count == before + 1 ? 0 : 1)
         }
         if args == ["upscale-test"] {
-            // Prova viva do upscaling XDR (método color table).
             _ = NSApplication.shared
             let id = CGMainDisplayID()
             print("potencial: \(UpscalingService.potentialHeadroom(id))× · atual (antes): \(UpscalingService.currentHeadroom(id))×")
@@ -55,7 +53,6 @@ struct Entry {
             exit(0)
         }
         if args.first == "edr-lg-test" {
-            // O headroom ATUAL do LG sobe com ativador EDR? E com HDR forçado via SkyLight?
             _ = NSApplication.shared
             guard let lg = DisplayManager.onlineDisplays().first(where: { !$0.isBuiltin }) else {
                 print("sem display externo"); exit(1)
@@ -82,7 +79,6 @@ struct Entry {
             exit(0)
         }
         if args.first == "forcehdr-test" {
-            // Forced HDR: reduz refresh do LG → banda sobra → SLS aceita HDR?
             _ = NSApplication.shared
             guard let lg = DisplayManager.onlineDisplays().first(where: { !$0.isBuiltin }) else {
                 print("sem display externo"); exit(1)
@@ -119,10 +115,10 @@ struct Entry {
         if args == ["combined-test"] {
             let id = CGMainDisplayID()
             let original = BrightnessService.hardwareBrightness(id) ?? 1
-            _ = BrightnessService.setCombined(id, 0.3)  // região software
+            _ = BrightnessService.setCombined(id, 0.3)
             let floorHW = BrightnessService.hardwareBrightness(id) ?? -1
             print("combinado 0.3 → hardware em \(floorHW) (esperado ≥0.04, nunca 0)")
-            _ = BrightnessService.setCombined(id, 1.2)  // região boost
+            _ = BrightnessService.setCombined(id, 1.2)
             var cfg = AppConfig()
             var dc = DisplayConfig()
             dc.color = ColorService.applied[id] ?? .neutral
@@ -146,10 +142,7 @@ struct MonitorPilotApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @StateObject private var store = DisplayStore()
 
-
     var body: some Scene {
-        // Janela normal (fallback pra barra de menu cheia/notch) + item de menu.
-        // A janela só aparece quando lançado com --window.
         WindowGroup("MonitorPilot", id: "main") {
             if Entry.popoverPreview {
                 MenuView(store: store).fixedSize()
@@ -169,14 +162,9 @@ struct MonitorPilotApp: App {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    /// Preenchido pelo DisplayStore vivo — desfaz o HiDPI virtual no encerramento.
     @MainActor static var teardownHiDPI: (() -> Void)?
     private var previewWindow: NSWindow?
 
-    /// SIGTERM (pkill, logout, reinstalação) NÃO chama applicationWillTerminate
-    /// por padrão: a tela virtual morria com o processo e o físico que a
-    /// espelhava ficava órfão/offline (o Dell sumiu duas vezes assim). Converte
-    /// o sinal em terminate() gracioso pra desfazer o espelho antes.
     private static var termSource: DispatchSourceSignal?
     private static func installSignalHandlers() {
         signal(SIGTERM, SIG_IGN)
@@ -207,7 +195,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if ConfigStore.load().hotkeysEnabled {
             HotkeyService.registerDefaults()
         }
-        // `monitorpilot pip off` / `stream off` (outro processo) fecham daqui.
         DistributedNotificationCenter.default().addObserver(
             forName: CLI.offNotification("pip"), object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { PIPController.shared.closeAll() }
@@ -216,8 +203,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             forName: CLI.offNotification("stream"), object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { StreamService.shared.stopAll() }
         }
-        // `monitorpilot set brightness|software-brightness` sem caminho de hardware:
-        // a gamma só sobrevive aqui, então a CLI delega pra este processo.
         DistributedNotificationCenter.default().addObserver(
             forName: CLI.brightnessNotification, object: nil, queue: .main) { n in
             guard let info = n.userInfo,
@@ -235,9 +220,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        // HiDPI virtual primeiro: desespelha e restaura o modo do físico ANTES
-        // de as telas virtuais sumirem (senão o físico fica no modo que o
-        // macOS escolher sozinho).
         MainActor.assumeIsolated {
             PIPController.shared.closeAll()
             StreamService.shared.stopAll()

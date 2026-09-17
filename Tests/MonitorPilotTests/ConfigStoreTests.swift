@@ -1,8 +1,6 @@
 import XCTest
 @testable import MonitorPilot
 
-/// Config antiga (sem os campos novos) tem que decodificar com defaults —
-/// se falhar, o load() cai pra AppConfig() e o próximo save() apaga tudo.
 final class ConfigStoreTests: XCTestCase {
     private func decode<T: Decodable>(_ json: String, as: T.Type) throws -> T {
         try JSONDecoder().decode(T.self, from: Data(json.utf8))

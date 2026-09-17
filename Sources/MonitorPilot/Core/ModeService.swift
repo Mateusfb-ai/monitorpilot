@@ -11,7 +11,6 @@ struct DisplayMode: Identifiable, Hashable {
     var pixelWidth: Int = 0
     var pixelHeight: Int = 0
     var scale: Double = 1
-    /// `false` = modo que o painel do Sistema esconde (só aparece com "Mostrar todos").
     var isUserVisible: Bool = true
 
     var label: String {
@@ -47,9 +46,6 @@ enum ModeService {
             }
     }
 
-    /// Todos os modos, inclusive os que o painel do Sistema esconde
-    /// (`isUserVisible == false` no MPDisplay) — é o "Mostrar todos (HiDPI)".
-    /// Sem MonitorPanel disponível, cai pra lista pública.
     static func allModes(for id: CGDirectDisplayID) -> [DisplayMode] {
         let public_ = modes(for: id)
         guard let mp = PresetService.display(for: id),
@@ -77,13 +73,10 @@ enum ModeService {
         }
     }
 
-    /// Lista pra UI: pública, ou completa quando o display está com "Mostrar todos".
     static func modes(for id: CGDirectDisplayID, showAll: Bool) -> [DisplayMode] {
         showAll ? allModes(for: id) : modes(for: id)
     }
 
-    /// Escada de resoluções pro slider: tamanhos lógicos únicos, preferindo HiDPI
-    /// e o maior refresh de cada tamanho, do menor pro maior.
     static func resolutionLadder(for id: CGDirectDisplayID, showAll: Bool = false) -> [DisplayMode] {
         let all = modes(for: id, showAll: showAll)
         var best: [String: DisplayMode] = [:]
@@ -100,7 +93,6 @@ enum ModeService {
         return best.values.sorted { ($0.width, $0.height) < ($1.width, $1.height) }
     }
 
-    /// Refreshes disponíveis pra resolução atual (mesmo WxH e mesma classe HiDPI).
     static func refreshOptions(for id: CGDirectDisplayID, width: Int, height: Int,
                                showAll: Bool = false) -> [DisplayMode] {
         modes(for: id, showAll: showAll)
@@ -108,12 +100,10 @@ enum ModeService {
             .sorted { $0.refreshRate > $1.refreshRate }
     }
 
-    /// Largura nativa em pixels (maior pixelWidth entre os modos) — base do % de escala:
-    /// 100% = metade dos pixels nativos (o "Retina padrão").
     static func nativePixelWidth(_ id: CGDirectDisplayID) -> Int {
         let options = [kCGDisplayShowDuplicateLowResolutionModes: kCFBooleanTrue] as CFDictionary
         guard let all = CGDisplayCopyAllDisplayModes(id, options) as? [CGDisplayMode] else { return 0 }
-        let nativeFlag: UInt32 = 0x0200_0000  // kDisplayModeNativeFlag
+        let nativeFlag: UInt32 = 0x0200_0000
         if let native = all.first(where: { $0.ioFlags & nativeFlag != 0 }) {
             return native.pixelWidth
         }
@@ -143,11 +133,7 @@ enum ModeService {
     }
 }
 
-
 extension ModeService {
-    /// Modo que a API pública não enxerga (escondido do painel do Sistema):
-    /// vai por MPDisplay.setModeNumber: (int → int), com lock do MPDisplayMgr.
-    /// Verificado nesta máquina: MP `modeNumber` == CG `ioDisplayModeID`.
     @discardableResult
     static func setHiddenMode(_ display: CGDirectDisplayID, modeNumber: Int32) -> Bool {
         guard let mp = PresetService.display(for: display) else { return false }
@@ -159,8 +145,6 @@ extension ModeService {
         }
     }
 
-    /// O display tem modo HiDPI pra sua resolução nativa? (MPDisplay privado;
-    /// sem MonitorPanel, infere pela lista pública.)
     static func hasNativeHiDPI(_ id: CGDirectDisplayID) -> Bool {
         if let mp = PresetService.display(for: id) {
             let sel = NSSelectorFromString("hasMatchingHiDPIMode:")

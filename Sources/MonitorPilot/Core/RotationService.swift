@@ -1,12 +1,9 @@
 import Foundation
 import CoreGraphics
 
-/// Rotação da tela. Puro: normalização dos ângulos.
 enum RotationPolicy {
     static let angles = [0, 90, 180, 270]
 
-    /// Próximo ângulo válido a partir do atual, andando `step` passos de 90°
-    /// (aceita negativo). Sempre devolve 0/90/180/270.
     static func next(current: Int, step: Int) -> Int {
         let base = normalize(current)
         let index = (angles.firstIndex(of: base) ?? 0) + step
@@ -14,7 +11,6 @@ enum RotationPolicy {
         return angles[((index % count) + count) % count]
     }
 
-    /// Arredonda pro ângulo válido mais próximo, em 0..<360.
     static func normalize(_ degrees: Int) -> Int {
         var d = degrees % 360
         if d < 0 { d += 360 }
@@ -23,9 +19,6 @@ enum RotationPolicy {
     }
 }
 
-/// Escrita da rotação via MPDisplay.setOrientation: (int → void, assinatura
-/// verificada nesta máquina), com lock do MPDisplayMgr. Leitura pela API
-/// pública CGDisplayRotation.
 enum RotationService {
     static func current(_ id: CGDirectDisplayID) -> Int {
         RotationPolicy.normalize(Int(CGDisplayRotation(id).rounded()))
@@ -36,7 +29,6 @@ enum RotationService {
         return (mp.value(forKey: "canChangeOrientation") as? Bool) ?? false
     }
 
-    /// MonitorPanel ainda aquecendo? (a linha mostra "carregando" em vez de sumir)
     static var ready: Bool { PresetService.manager() != nil }
 
     @discardableResult

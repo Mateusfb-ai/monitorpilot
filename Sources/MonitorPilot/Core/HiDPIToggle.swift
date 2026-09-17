@@ -1,12 +1,7 @@
 import Foundation
 import CoreGraphics
 
-/// Display que JÁ tem HiDPI nativo: "Alta Resolução" é só alternar entre o
-/// modo HiDPI e o gêmeo de mesma resolução lógica sem HiDPI (esse gêmeo
-/// costuma estar escondido do painel do Sistema — vem de `allModes`).
 enum HiDPIToggle {
-    /// Gêmeo do modo atual com o HiDPI invertido (mesma resolução lógica e
-    /// mesma taxa). Preferindo, entre vários, o de maior densidade.
     static func twin(of current: DisplayMode, in modes: [DisplayMode]) -> DisplayMode? {
         modes
             .filter {
@@ -22,7 +17,6 @@ enum HiDPIToggle {
 
 @MainActor
 enum HiDPIToggleService {
-    /// (está em HiDPI, id do modo gêmeo) — nil quando não há par pra alternar.
     static func state(_ id: CGDirectDisplayID) -> (isHiDPI: Bool, twinID: Int32)? {
         let modes = ModeService.allModes(for: id)
         guard let current = modes.first(where: \.isCurrent),
@@ -31,7 +25,6 @@ enum HiDPIToggleService {
         return (current.isHiDPI, twin.id)
     }
 
-    /// Reversível: alternar de novo volta ao modo anterior.
     @discardableResult
     static func set(_ id: CGDirectDisplayID, hiDPI: Bool) -> Bool {
         guard let state = state(id), state.isHiDPI != hiDPI else { return false }

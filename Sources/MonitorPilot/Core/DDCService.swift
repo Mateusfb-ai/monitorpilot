@@ -2,9 +2,6 @@ import Foundation
 import CoreGraphics
 import IOKit
 
-/// DDC/CI via IOAVService (Apple Silicon) — receita do m1ddc/BetterDisplay.
-/// Fala I2C direto com o monitor externo no endereço 0x37.
-/// Experimental: sem monitor externo conectado, tudo aqui retorna nil/false.
 enum DDCService {
     enum VCP: UInt8 {
         case brightness = 0x10
@@ -20,17 +17,14 @@ enum DDCService {
     private static let i2cAddress: UInt32 = 0x37
     private static let dataAddress: UInt32 = 0x51
 
-    /// Ajuste fino do protocolo (equivalente às configs avançadas de DDC do BetterDisplay).
     struct Tuning: Codable, Equatable {
-        var writeAttempts: Int = 3        // tentativas em caso de falha
-        var sendsPerCommand: Int = 1      // envios por comando (monitores surdos)
-        var delayBetweenMs: UInt32 = 20   // atraso entre tentativas/envios
-        var readReplyWaitMs: UInt32 = 40  // espera pela resposta na leitura
+        var writeAttempts: Int = 3
+        var sendsPerCommand: Int = 1
+        var delayBetweenMs: UInt32 = 20
+        var readReplyWaitMs: UInt32 = 40
         var ignoreReadChecksum: Bool = false
     }
     static var tuning = Tuning()
-
-    // MARK: Localização do serviço AV do display externo
 
     private static var cachedServices: [CGDirectDisplayID: CFTypeRef] = [:]
 
@@ -69,9 +63,6 @@ enum DDCService {
         return nil
     }
 
-    /// Com 1 externo, é ele. Com vários, casa pelo papel DCPEXT<n> do proxy ×
-    /// ConnectionMapping (DDCPortMapper). Sem casamento único, falha alto —
-    /// escrever no chute mexeria no monitor ERRADO.
     private static func portService(for id: CGDirectDisplayID, among externals: [io_service_t]) -> io_service_t? {
         if externals.count == 1 { return externals[0] }
         guard let wanted = DDCPortMapper.role(
@@ -83,7 +74,6 @@ enum DDCService {
         return matches.count == 1 ? matches[0] : nil
     }
 
-    /// Diagnóstico `ddc ports`: cada proxy externo → papel DCPEXT → display casado.
     static func portReport() -> [String] {
         var out: [String] = []
         let conns = DDCPortMapper.connections()
@@ -113,8 +103,6 @@ enum DDCService {
         }
         return out
     }
-
-    // MARK: Protocolo DDC/CI
 
     static func write(_ id: CGDirectDisplayID, vcp: VCP, value: UInt16) -> Bool {
         guard let av = avService(for: id),
@@ -170,7 +158,6 @@ enum DDCService {
 
     private static var cachedMax: [String: UInt16] = [:]
 
-    /// Max reportado pelo monitor para um VCP (cacheado por display+vcp).
     static func maxValue(_ id: CGDirectDisplayID, vcp: VCP) -> UInt16? {
         let key = "\(id):\(vcp.rawValue)"
         if let cached = cachedMax[key] { return cached }

@@ -21,6 +21,6 @@ final class RotationPolicyTests: XCTestCase {
     }
 
     func testNextFromInvalidCurrentFallsBackToZeroBase() {
-        XCTAssertEqual(RotationPolicy.next(current: 45, step: 1), 180)  // 45 → 90 → +1 = 180
+        XCTAssertEqual(RotationPolicy.next(current: 45, step: 1), 180)
     }
 }
