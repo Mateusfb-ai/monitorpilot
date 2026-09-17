@@ -1,3 +1,5 @@
+<a href="https://mateusfb-ai.vercel.app"><img src=".github/brand/banner.svg" alt="mateusfb.ai — monitorpilot" width="100%"></a>
+
 # MonitorPilot
 
 **Menu-bar + CLI control for every display on your Mac: brightness (hardware, DDC/CI and software), resolution & HiDPI, HDR/XDR boost, virtual displays, mirroring, rotation, PIP and more.** Native Swift, no drivers, no kernel extensions.
@@ -125,3 +127,7 @@ Techniques from BetterDisplay, MonitorControl, m1ddc, BetterDummy and Lunar — 
 ## License
 
 [MIT](LICENSE)
+
+---
+
+<p align="center"><a href="https://mateusfb-ai.vercel.app"><img src=".github/brand/mark.svg" width="20" alt=""></a><br><sub>Built in public at <a href="https://mateusfb-ai.vercel.app">mateusfb.ai</a></sub></p>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="160" viewBox="0 0 1200 160">
+<rect width="1200" height="160" fill="#000"/>
+<rect x="1" y="1" width="1198" height="158" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="4 4"/>
+<path d="M 9 1 L 1 1 L 1 9" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+<path d="M 1191 1 L 1199 1 L 1199 9" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+<path d="M 9 159 L 1 159 L 1 151" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+<path d="M 1191 159 L 1199 159 L 1199 151" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+<g transform="translate(40,52) scale(1.75)">
+<path d="M 16 16.5 L 26 21.5 L 16 26.5 L 6 21.5 Z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" fill="none"/><path d="M 16 11 L 26 16 L 16 21 L 6 16 Z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round" fill="none"/><path d="M 16 5.5 L 26 10.5 L 16 15.5 L 6 10.5 Z" fill="#fff"/>
+</g>
+<text x="140" y="90" font-family="system-ui, -apple-system, 'Geist', sans-serif" font-weight="500" font-size="28" fill="#fff">mateusfb<tspan font-family="'SF Mono', 'JetBrains Mono', monospace" fill="rgba(255,255,255,0.6)">.ai</tspan></text>
+<text x="1160" y="86" font-family="'SF Mono', 'JetBrains Mono', monospace" font-size="14" fill="rgba(255,255,255,0.6)" text-anchor="end" letter-spacing="1">MONITORPILOT</text>
+</svg>
