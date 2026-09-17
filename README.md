@@ -3,6 +3,12 @@
 **Menu-bar + CLI control for every display on your Mac: brightness (hardware, DDC/CI and software), resolution & HiDPI, HDR/XDR boost, virtual displays, mirroring, rotation, PIP and more.** Native Swift, no drivers, no kernel extensions.
 
 <p align="center">
+  <a href="https://github.com/spyko-app/monitorpilot/releases/download/v0.1.0/MonitorPilot-0.1.0.dmg"><img src="https://img.shields.io/badge/Download-MonitorPilot_0.1.0_.dmg-0a84ff?style=for-the-badge&logo=apple&logoColor=white" alt="Download MonitorPilot 0.1.0 DMG"></a>
+  &nbsp;
+  <a href="https://github.com/spyko-app/monitorpilot/releases"><img src="https://img.shields.io/github/v/release/spyko-app/monitorpilot?style=for-the-badge&label=Latest&color=333" alt="Latest release"></a>
+</p>
+
+<p align="center">
   <img src="docs/img/monitorpilot-popover.png" width="360" alt="MonitorPilot menu-bar popover">
 </p>
 
@@ -36,6 +42,18 @@ Config lives in a plain JSON file (`~/.config/monitorpilot/config.json`) so it i
 
 ## Install
 
+### Option A — download the app (recommended)
+
+1. Click the **Download** button above (or grab `MonitorPilot-0.1.0.dmg` from the [Releases](https://github.com/spyko-app/monitorpilot/releases) page).
+2. Open the DMG and drag **MonitorPilot** onto the **Applications** shortcut.
+3. Open **Applications → MonitorPilot**. The build is signed ad-hoc (not notarized yet), so the first time use **right-click → Open → Open**. Needed only once.
+4. A monitor icon appears in the menu bar; click it for the per-display popover (brightness, resolution, monitor options).
+5. Optional: add the CLI to your shell — `alias monitorpilot=/Applications/MonitorPilot.app/Contents/MacOS/MonitorPilot`.
+
+PIP and screen streaming ask for **Screen Recording** the first time you click them; nothing is requested at launch.
+
+### Option B — build from source
+
 ```bash
 git clone https://github.com/spyko-app/monitorpilot.git
 cd monitorpilot
@@ -50,8 +68,6 @@ swift build                        # debug binary in .build/debug/MonitorPilot
 swift test                         # unit tests (pure logic: planners, policies, CLI parser, DDC mapping)
 open build/MonitorPilot.app --args --window   # run as a normal window instead of a menu-bar popover
 ```
-
-PIP and screen streaming ask for **Screen Recording** the first time you click them; nothing is requested at launch.
 
 ## CLI
 
